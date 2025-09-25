@@ -1,18 +1,20 @@
-// Mock Twilio OTP service for development
-const client = { messages: { create: async () => {} } }; // Mock client
+const crypto = require("crypto");
 
-async function sendOTP(phoneNumber, otp) {
-  // Always succeed in sending OTP
-  console.log(`Mock OTP sent to ${phoneNumber}: ${otp}`);
-  return true;
+class OTPService {
+  generateOTP() {
+    return crypto.randomInt(100000, 999999).toString();
+  }
+
+  async sendOTP(phone, code) {
+    // Implement actual sms service
+    console.log(`Sending OTP ${code} to ${phone}`);
+  }
+
+  async verifyOTP(phone, code) {
+    //implement otp verification logic
+    //for demo accept 6 digit code
+    return code.length === 6;
+  }
 }
 
-function generateOTP() {
-  // Always return '0000' as OTP
-  return '0000';
-}
-
-module.exports = {
-  sendOTP,
-  generateOTP
-};
+module.exports = new OTPService();
