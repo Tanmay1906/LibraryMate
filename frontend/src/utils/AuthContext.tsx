@@ -136,9 +136,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         body: JSON.stringify(userData),
       });
 
-      if (response.success) {
-        // Store pending user data for OTP verification
-        setPendingUser({ ...userData, phone: userData.phone });
+      if (response.success && response.token && response.user) {
+        // Direct login after successful signup
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('user', JSON.stringify(response.user));
+        
+        setUser(response.user);
+        setIsAuthenticated(true);
+        setPendingUser(null); // Clear any pending user data
+        
         return { success: true };
       } else {
         return { success: false, error: response.message || 'Signup failed' };

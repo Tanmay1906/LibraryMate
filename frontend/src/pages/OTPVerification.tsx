@@ -92,12 +92,17 @@ const OTPVerification: React.FC = () => {
     setError('');
 
     try {
-      const success = await verifyOTP(otpString);
-      if (success) {
+      if (!pendingUser?.phone) {
+        setError('Phone number not found. Please signup again.');
+        return;
+      }
+      
+      const result = await verifyOTP(pendingUser.phone, otpString);
+      if (result.success) {
         const redirectPath = pendingUser?.role === 'owner' ? '/owner/dashboard' : '/student/dashboard';
         navigate(redirectPath);
       } else {
-        setError('Invalid OTP. Try 0000 for demo.');
+        setError(result.error || 'Invalid OTP. Please try again.');
       }
     } catch {
       setError('Verification failed. Please try again.');

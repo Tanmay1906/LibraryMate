@@ -89,7 +89,9 @@ const Signup: React.FC = () => {
 
       const result = await signup(backendFormData);
       if (result.success) {
-        navigate("/otp-verification");
+        // Redirect based on user role
+        const redirectPath = formData.role === 'owner' ? '/owner/dashboard' : '/student/dashboard';
+        navigate(redirectPath);
       } else {
         setError(result.error || "Registration failed. Please try again.");
       }

@@ -70,12 +70,35 @@ exports.signup = catchAsync(async (req, res) => {
     const { name, email, phone, password, role, registrationNumber, aadharReference, libraryId } = req.body;
     console.log('Extracted fields:', { name, email, phone, role, registrationNumber, aadharReference, libraryId });
     const hashed = await bcrypt.hash(password, 10);
+    console.log('Password hashed successfully');
     
     if (role === 'admin') {
+      console.log('Creating admin account...');
       const admin = await prisma.admin.create({ 
         data: { name, email, phone, password: hashed } 
       });
-      return res.json({ success: true, admin });
+      
+      // Generate JWT token for immediate login
+      const token = jwt.sign(
+        { id: admin.id, role: 'admin' }, 
+        process.env.JWT_SECRET, 
+        { expiresIn: '7d' }
+      );
+
+      const userData = {
+        id: admin.id,
+        name: admin.name,
+        email: admin.email,
+        phone: admin.phone,
+        role: 'admin'
+      };
+
+      return res.status(201).json({ 
+        success: true, 
+        token,
+        user: userData,
+        message: 'Admin registered successfully!' 
+      });
     } else {
       // For students, libraryId is required
       if (!libraryId) {
@@ -123,10 +146,31 @@ exports.signup = catchAsync(async (req, res) => {
           dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
         }
       });
+
+      // Generate JWT token for immediate login
+      const token = jwt.sign(
+        { id: student.id, role: 'student' }, 
+        process.env.JWT_SECRET, 
+        { expiresIn: '7d' }
+      );
+
+      const userData = {
+        id: student.id,
+        name: student.name,
+        email: student.email,
+        phone: student.phone,
+        role: 'student',
+        registrationNumber: student.registrationNumber,
+        subscriptionPlan: student.subscriptionPlan,
+        libraryId: student.libraryId
+      };
+
+      console.log('About to send response...');
       return res.status(201).json({ 
         success: true, 
-        student,
-        message: 'Student registered successfully' 
+        token,
+        user: userData,
+        message: 'Student registered successfully!' 
       });
     }
 });
