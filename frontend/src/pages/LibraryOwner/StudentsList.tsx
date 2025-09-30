@@ -1,8 +1,8 @@
-import { mockStudents } from '../../utils/mockData';
+
 import React, { useState } from 'react';
 import { Search, Filter, MoreVertical, Mail, Phone, Calendar, CreditCard, User, BookOpen, Clock, CheckCircle, AlertCircle, XCircle, Edit3, Save, X, Users } from 'lucide-react';
 import Navbar from '../../components/Layout/Navbar';
-// import { mockStudents } from '../../utils/mockData';
+
 // Button Component
 type ButtonVariant = 'primary' | 'secondary' | 'success' | 'outline' | 'ghost';
 type ButtonSize = 'sm' | 'md' | 'lg';

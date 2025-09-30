@@ -1,8 +1,8 @@
 const { PrismaClient } = require('@prisma/client');
+const catchAsync = require('../middlewares/errorHandler').catchAsync;
 const prisma = new PrismaClient();
 
-exports.getReportSummary = async (req, res) => {
-  try {
+exports.getReportSummary = catchAsync(async (req, res) => {
     // Get comprehensive statistics
     const bookCount = await prisma.book.count();
     const studentCount = await prisma.student.count();
@@ -40,29 +40,28 @@ exports.getReportSummary = async (req, res) => {
       select: { name: true, createdAt: true, subscriptionPlan: true }
     });
 
-    res.json({ 
-      summary: {
-        bookCount, 
-        studentCount, 
-        paymentCount, 
-        libraryCount,
-        totalRevenue: totalRevenue._sum.amount || 0,
-        pendingPayments,
-        activeStudents
+    res.status(200).json({
+      success: true,
+      data: {
+        summary: {
+          bookCount, 
+          studentCount, 
+          paymentCount, 
+          libraryCount,
+          totalRevenue: totalRevenue._sum.amount || 0,
+          pendingPayments,
+          activeStudents
+        },
+        recentActivities: {
+          payments: recentPayments,
+          students: recentStudents
+        }
       },
-      recentActivities: {
-        payments: recentPayments,
-        students: recentStudents
-      }
+      message: 'Report summary fetched successfully'
     });
-  } catch (error) {
-    console.error('Error fetching report summary:', error);
-    res.status(500).json({ error: 'Failed to fetch report summary.' });
-  }
-};
+});
 
-exports.getStudentReport = async (req, res) => {
-  try {
+exports.getStudentReport = catchAsync(async (req, res) => {
     const students = await prisma.student.findMany({
       include: {
         library: {
@@ -79,15 +78,14 @@ exports.getStudentReport = async (req, res) => {
       }
     });
     
-    res.json(students);
-  } catch (error) {
-    console.error('Error fetching student report:', error);
-    res.status(500).json({ error: 'Failed to fetch student report.' });
-  }
-};
+    res.status(200).json({
+      success: true,
+      data: students,
+      message: 'Student report fetched successfully'
+    });
+});
 
-exports.getPaymentReport = async (req, res) => {
-  try {
+exports.getPaymentReport = catchAsync(async (req, res) => {
     const payments = await prisma.payment.findMany({
       include: {
         student: {
@@ -97,9 +95,9 @@ exports.getPaymentReport = async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
     
-    res.json(payments);
-  } catch (error) {
-    console.error('Error fetching payment report:', error);
-    res.status(500).json({ error: 'Failed to fetch payment report.' });
-  }
-};
+    res.status(200).json({
+      success: true,
+      data: payments,
+      message: 'Payment report fetched successfully'
+    });
+});

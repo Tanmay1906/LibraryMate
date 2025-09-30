@@ -1,4 +1,4 @@
-import { mockStudents } from '../../utils/mockData';
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, Calendar, CreditCard, Heart, CheckCircle, Clock, TrendingUp } from 'lucide-react';

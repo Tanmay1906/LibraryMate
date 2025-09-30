@@ -1,4 +1,4 @@
-import { mockStudents } from '../../utils/mockData';
+
 import React from 'react';
 import Card from '../../components/UI/Card';
 import Navbar from '../../components/Layout/Navbar';

@@ -99,7 +99,7 @@ const OTPVerification: React.FC = () => {
       } else {
         setError('Invalid OTP. Try 0000 for demo.');
       }
-    } catch (err) {
+    } catch {
       setError('Verification failed. Please try again.');
     } finally {
       setLoading(false);

@@ -1,4 +1,4 @@
-import { mockStudents } from '../../utils/mockData';
+
 import React, { useState } from 'react';
 import { Calendar, CreditCard, Download, Filter, CheckCircle, Clock, XCircle, Eye } from 'lucide-react';
 import Navbar from '../../components/Layout/Navbar';
@@ -6,7 +6,6 @@ import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import { useNavigate } from 'react-router-dom';
 import Modal from '../../components/UI/Modal';
-// import { type PaymentRecord } from '../../utils/mockData';
 /**
  * Payment History Page Component
  * Displays student's payment history with filtering and detailed transaction views

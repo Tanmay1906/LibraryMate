@@ -3,48 +3,71 @@ import Navbar from '../../components/Layout/Navbar';
 import Card from '../../components/UI/Card';
 import Input from '../../components/UI/Input';
 import Button from '../../components/UI/Button';
-// import { subscriptionPlans } from '../../utils/mockData';
+import { apiCall, uploadFile } from '../../utils/api';
+import { useAuth } from '../../utils/AuthContext';
+import { SubscriptionPlan } from '../../types';
 /**
  * Add Student Page Component
  * Allows library owners to register new students with subscription plans
  * Features comprehensive form validation and payment configuration
  */
 const AddStudent: React.FC = () => {
+  const { user } = useAuth();
+  
   // Helper to format price in INR
   const formatINR = (amount: number) => `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-  // Set INR prices for dropdown (mock)
-  const planPrices: Record<string, number> = {
+  
+  // Plan pricing data
+  const planPrices = {
+    MONTHLY: 2499,
+    QUARTERLY: 6499,
+    YEARLY: 24999,
     monthly: 2499,
     quarterly: 6499,
     yearly: 24999
   };
-  const [plans, setPlans] = useState<any>({});
+
+  const [plans, setPlans] = useState<Record<string, SubscriptionPlan>>({});
+  const [loadingPlans, setLoadingPlans] = useState(true);
+  
+  // Load subscription plans from API
   React.useEffect(() => {
-    fetch('http://localhost:4000/api/subscription-plans')
-      .then(res => res.json())
-      .then(data => setPlans(data))
-      .catch(() => setPlans({}));
+    const fetchPlans = async () => {
+      try {
+        const data = await apiCall('/subscription/plans');
+        setPlans(data);
+      } catch (error) {
+        console.error('Failed to fetch plans:', error);
+        // Fallback to default plans
+        setPlans({
+          MONTHLY: { id: 'monthly', name: 'MONTHLY', price: 2499, duration: '1 month', features: ['Basic library access', 'Book borrowing', 'Study space'] },
+          QUARTERLY: { id: 'quarterly', name: 'QUARTERLY', price: 6499, duration: '3 months', features: ['Extended access', 'Priority booking', 'Digital resources'] },
+          YEARLY: { id: 'yearly', name: 'YEARLY', price: 24999, duration: '12 months', features: ['Full access', 'Priority support', 'All premium features'] }
+        });
+      } finally {
+        setLoadingPlans(false);
+      }
+    };
+
+    fetchPlans();
   }, []);
-  // Get last registration number from localStorage or start at 1
-  // Only increment registration number if a student is actually added
+  // Generate registration number (will be assigned by backend)
   const getNextRegNumber = () => {
-    const assignedNumbers = JSON.parse(localStorage.getItem('assignedRegNumbers') || '[]');
-    let nextNum = 1;
-    while (assignedNumbers.includes(nextNum)) {
-      nextNum++;
-    }
-    return `REG-2025-${String(nextNum).padStart(3, '0')}`;
+    return `REG-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
   };
 
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
+    password: '',
+    confirmPassword: '',
     registrationNumber: getNextRegNumber(),
-    subscriptionPlan: 'monthly' as 'monthly' | 'quarterly' | 'yearly',
-    paymentMethod: 'one_time' as 'one_time' | 'emi',
-    emiUpgrade: '',
+    subscriptionPlan: 'MONTHLY' as 'MONTHLY' | 'QUARTERLY' | 'YEARLY',
+    paymentMethod: 'CASH' as 'CASH' | 'CARD' | 'UPI' | 'NET_BANKING' | 'emi',
+    emiUpgrade: '' as '' | '3_month' | '6_month' | '12_month',
     startDate: new Date().toISOString().split('T')[0],
+    aadharReference: '',
     aadharFile: null as File | null
   });
   const [loading, setLoading] = useState(false);
@@ -74,15 +97,51 @@ const AddStudent: React.FC = () => {
       setError('Student name is required');
       return false;
     }
+    
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!formData.email.trim()) {
       setError('Email address is required');
       return false;
     }
+    if (!emailRegex.test(formData.email)) {
+      setError('Please enter a valid email address');
+      return false;
+    }
+    
+    // Phone validation (Indian format)
+    const phoneRegex = /^(\+91[-\s]?)?[0]?(91)?[789]\d{9}$/;
     if (!formData.phone.trim()) {
       setError('Phone number is required');
       return false;
     }
-  // Registration number is always auto-assigned
+    if (!phoneRegex.test(formData.phone.replace(/\s/g, ''))) {
+      setError('Please enter a valid Indian phone number');
+      return false;
+    }
+    
+    // Password validation
+    if (!formData.password.trim()) {
+      setError('Password is required');
+      return false;
+    }
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters long');
+      return false;
+    }
+    
+    // Password confirmation
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return false;
+    }
+    
+    // Aadhar validation (if provided as text)
+    if (formData.aadharReference && !/^\d{12}$/.test(formData.aadharReference)) {
+      setError('Aadhar number must be exactly 12 digits');
+      return false;
+    }
+    
     return true;
   };
 
@@ -98,40 +157,95 @@ const AddStudent: React.FC = () => {
     setError('');
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Reset form and show success
-      // Mark this registration number as assigned
-      const regNum = parseInt(formData.registrationNumber.split('-')[2], 10);
-      const assignedNumbers = JSON.parse(localStorage.getItem('assignedRegNumbers') || '[]');
-      if (!assignedNumbers.includes(regNum)) {
-        assignedNumbers.push(regNum);
-        localStorage.setItem('assignedRegNumbers', JSON.stringify(assignedNumbers));
+      let aadharReference = formData.aadharReference;
+      
+      // Upload Aadhar file if provided
+      if (formData.aadharFile) {
+        try {
+          const uploadResponse = await uploadFile('/upload/aadhar', formData.aadharFile);
+          aadharReference = uploadResponse.fileId || uploadResponse.url;
+        } catch (uploadError) {
+          console.error('Aadhar upload failed:', uploadError);
+          setError('Failed to upload Aadhar document. Please try again.');
+          return;
+        }
       }
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        registrationNumber: getNextRegNumber(),
-        subscriptionPlan: 'monthly',
-        paymentMethod: 'one_time',
-        emiUpgrade: '',
-        startDate: new Date().toISOString().split('T')[0],
-        aadharFile: null
-      });
-      setSuccess(true);
 
-      // Hide success message after 3 seconds
-      setTimeout(() => setSuccess(false), 3000);
+      // Prepare student data
+      const studentData = {
+        name: formData.name.trim(),
+        email: formData.email.trim().toLowerCase(),
+        phone: formData.phone.trim(),
+        password: formData.password,
+        registrationNumber: formData.registrationNumber,
+        aadharReference: aadharReference,
+        subscriptionPlan: formData.subscriptionPlan,
+        libraryId: user?.libraryId, // Associate with current library owner's library
+        role: 'student'
+      };
+
+      // Create student account
+      const response = await apiCall('/auth/signup', {
+        method: 'POST',
+        body: JSON.stringify(studentData),
+      });
+
+      if (response.success) {
+        // Create initial payment record if needed
+        if (formData.paymentMethod && formData.paymentMethod !== 'emi') {
+          try {
+            await apiCall('/payment', {
+              method: 'POST',
+              body: JSON.stringify({
+                studentId: response.student?.id || response.data?.student?.id,
+                amount: planPrices[formData.subscriptionPlan] || 0,
+                plan: formData.subscriptionPlan,
+                method: formData.paymentMethod,
+                status: 'PENDING'
+              }),
+            });
+          } catch (paymentError) {
+            console.error('Payment record creation failed:', paymentError);
+            // Don't block student creation if payment record fails
+          }
+        }
+
+        // Reset form and show success
+        setFormData({
+          name: '',
+          email: '',
+          phone: '',
+          password: '',
+          confirmPassword: '',
+          registrationNumber: getNextRegNumber(),
+          subscriptionPlan: 'MONTHLY',
+          paymentMethod: 'CASH',
+          emiUpgrade: '',
+          startDate: new Date().toISOString().split('T')[0],
+          aadharReference: '',
+          aadharFile: null
+        });
+        setSuccess(true);
+
+        // Hide success message after 3 seconds
+        setTimeout(() => setSuccess(false), 3000);
+      } else {
+        setError(response.message || 'Failed to add student');
+      }
     } catch (err) {
-      setError('Failed to add student. Please try again.');
+      console.error('Student creation error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to add student. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const selectedPlan = plans[formData.subscriptionPlan] || { duration: '', price: 0, features: [] };
+  const selectedPlan = plans[formData.subscriptionPlan] || { 
+    duration: formData.subscriptionPlan === 'MONTHLY' ? '1 month' : 
+             formData.subscriptionPlan === 'QUARTERLY' ? '3 months' : '12 months',
+    price: planPrices[formData.subscriptionPlan] || 0, 
+    features: ['Basic library access', 'Book borrowing', 'Study space'] 
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-indigo-50 to-emerald-50 relative">
@@ -160,9 +274,14 @@ const AddStudent: React.FC = () => {
           </div>
         )}
 
-        <div className="flex flex-col lg:flex-row gap-0 lg:gap-0">
-          {/* Sidebar - Subscription Summary & Features */}
-          <aside className="lg:w-96 flex-shrink-0 space-y-12 lg:sticky lg:top-24 h-fit bg-transparent lg:border-r lg:border-slate-200 lg:pr-12 pb-12 mb-12 lg:mb-0">
+        {loadingPlans ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="text-lg text-slate-600">Loading subscription plans...</div>
+          </div>
+        ) : (
+          <div className="flex flex-col lg:flex-row gap-0 lg:gap-0">
+            {/* Sidebar - Subscription Summary & Features */}
+            <aside className="lg:w-96 flex-shrink-0 space-y-12 lg:sticky lg:top-24 h-fit bg-transparent lg:border-r lg:border-slate-200 lg:pr-12 pb-12 mb-12 lg:mb-0">
             {/* Subscription Summary */}
             <Card className="bg-white/80 backdrop-blur-lg border border-slate-100 shadow-2xl p-8 rounded-2xl mb-10">
               <h3 className="text-xl font-bold text-slate-900 mb-6">Subscription Summary</h3>
@@ -298,6 +417,26 @@ const AddStudent: React.FC = () => {
                       required
                       className="bg-white/60 border border-indigo-200 rounded-lg"
                     />
+                    <Input
+                      name="password"
+                      type="password"
+                      label="Password"
+                      placeholder="Enter password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      required
+                      className="bg-white/60 border border-indigo-200 rounded-lg"
+                    />
+                    <Input
+                      name="confirmPassword"
+                      type="password"
+                      label="Confirm Password"
+                      placeholder="Confirm password"
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      required
+                      className="bg-white/60 border border-indigo-200 rounded-lg"
+                    />
                   </div>
                   {/* Subscription Setup */}
                   <div>
@@ -313,9 +452,9 @@ const AddStudent: React.FC = () => {
                           onChange={handleChange}
                           className="w-full px-4 py-3 border border-indigo-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-white/80 shadow"
                         >
-                          <option value="monthly">Monthly - ₹2,499.00</option>
-                          <option value="quarterly">Quarterly - ₹6,499.00 (10% off)</option>
-                          <option value="yearly">Yearly - ₹24,999.00 (20% off)</option>
+                          <option value="MONTHLY">Monthly - ₹2,499.00</option>
+                          <option value="QUARTERLY">Quarterly - ₹6,499.00 (10% off)</option>
+                          <option value="YEARLY">Yearly - ₹24,999.00 (20% off)</option>
                         </select>
                       </div>
                       <div>
@@ -328,7 +467,10 @@ const AddStudent: React.FC = () => {
                           onChange={handleChange}
                           className="w-full px-4 py-3 border border-indigo-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-white/80 shadow"
                         >
-                          <option value="one_time">One-time Payment</option>
+                          <option value="CASH">Cash Payment</option>
+                          <option value="CARD">Card Payment</option>
+                          <option value="UPI">UPI Payment</option>
+                          <option value="NET_BANKING">Net Banking</option>
                           <option value="emi">EMI (Installments)</option>
                         </select>
                         {formData.paymentMethod === 'emi' && (
@@ -363,15 +505,17 @@ const AddStudent: React.FC = () => {
                     type="submit"
                     variant="primary"
                     size="lg"
+                    disabled={loading || loadingPlans}
                     className="w-full md:w-auto mt-4 shadow-lg hover:scale-[1.03] transition-transform"
                   >
-                    Add Student
+                    {loading ? 'Adding Student...' : 'Add Student'}
                   </Button>
                 </form>
               </Card>
             </div>
           </main>
         </div>
+        )}
       </div>
     </div>
   );

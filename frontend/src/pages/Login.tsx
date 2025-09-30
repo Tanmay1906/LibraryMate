@@ -10,6 +10,7 @@ import { useAuth } from '../utils/AuthContext';
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState<'admin' | 'student' | 'owner'>('student');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -23,14 +24,25 @@ const Login: React.FC = () => {
     setError('');
 
     try {
-      const success = await login(email);
-      if (success) {
-        navigate(email === 'owner@test.com' ? '/owner/dashboard' : '/student/dashboard');
+      const result = await login(email, password, role);
+      if (result.success) {
+        // Navigate based on actual user role from response
+        switch (role) {
+          case 'owner':
+          case 'admin':
+            navigate('/owner/dashboard');
+            break;
+          case 'student':
+            navigate('/student/dashboard');
+            break;
+          default:
+            navigate('/student/dashboard');
+        }
       } else {
-        setError('Invalid credentials. Please check your email and password.');
+        setError(result.error || 'Invalid credentials. Please check your email and password.');
       }
-    } catch (err) {
-      setError('Authentication failed. Please try again.');
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -175,6 +187,26 @@ const Login: React.FC = () => {
                     >
                       {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
+                  </div>
+                </div>
+
+                {/* Role Selection */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-slate-700">Login As</label>
+                  <div className="relative">
+                    <select
+                      value={role}
+                      onChange={(e) => setRole(e.target.value as 'admin' | 'student' | 'owner')}
+                      className="w-full px-4 py-4 bg-slate-50/50 border border-slate-200/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-200 text-slate-900 appearance-none"
+                      required
+                    >
+                      <option value="student">Student</option>
+                      <option value="admin">Library Admin</option>
+                      <option value="owner">Library Owner</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
+                      <Users className="h-5 w-5 text-slate-400" />
+                    </div>
                   </div>
                 </div>
 

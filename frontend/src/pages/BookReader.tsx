@@ -9,14 +9,13 @@ import {
   ZoomOut,
   Sun,
   Moon,
-  Type,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
 import Navbar from '../components/Layout/Navbar';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
-import { mockBooks } from '../utils/mockData';
+import { Book } from '../types';
 
 /**
  * Book Reader Page Component
@@ -27,13 +26,14 @@ const BookReader: React.FC = () => {
   const { bookId } = useParams<{ bookId: string }>();
   const navigate = useNavigate();
   
-  const [book, setBook] = useState(mockBooks.find(b => b.id === bookId));
+  const [book, setBook] = useState<Book | null>(null);
+  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages] = useState(156);
   const [fontSize, setFontSize] = useState(16);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [readingProgress, setReadingProgress] = useState(book?.readingProgress || 0);
+  const [readingProgress, setReadingProgress] = useState(0);
 
   /**
    * Mock book content for demonstration
@@ -61,15 +61,53 @@ const BookReader: React.FC = () => {
   `;
 
   /**
+   * Fetch book data on component mount
+   */
+  useEffect(() => {
+    const fetchBook = async () => {
+      if (!bookId) return;
+      
+      try {
+        setLoading(true);
+        // For now, create a mock book since we don't have a book details API endpoint
+        const mockBook: Book = {
+          id: bookId,
+          title: "The Library Revolution",
+          author: "Sarah Mitchell",
+          genre: "Fiction",
+          category: "Drama",
+          description: "A heartwarming story about saving a community library and bringing people together through the power of books.",
+          libraryId: "lib-1",
+          available: true,
+          totalCopies: 5,
+          availableCopies: 3,
+          readingProgress: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        
+        setBook(mockBook);
+        setReadingProgress(mockBook.readingProgress || 0);
+      } catch (error) {
+        console.error('Error fetching book:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBook();
+  }, [bookId]);
+
+  /**
    * Update reading progress based on current page
    */
   useEffect(() => {
     const progress = Math.round((currentPage / totalPages) * 100);
     setReadingProgress(progress);
     
-    // Update book progress in mock data
+    // Update book progress
     if (book) {
-      setBook(prev => prev ? { ...prev, readingProgress: progress } : prev);
+      setBook((prev: Book | null) => prev ? { ...prev, readingProgress: progress } : prev);
     }
   }, [currentPage, totalPages, book]);
 
@@ -116,6 +154,18 @@ const BookReader: React.FC = () => {
   const addBookmark = () => {
     alert(`Bookmark added at page ${currentPage}`);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <Navbar />
+        <div className="max-w-4xl mx-auto px-4 py-8 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <h1 className="text-xl font-medium text-slate-900">Loading book...</h1>
+        </div>
+      </div>
+    );
+  }
 
   if (!book) {
     return (

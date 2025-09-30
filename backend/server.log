@@ -1,0 +1,4 @@
+nohup: ignoring input
+Cron jobs initialized successfully
+Uncaught Exception: listen EADDRINUSE: address already in use :::4000
+Shutting down the server due to uSIGTERM received. Shutting down gracefully...

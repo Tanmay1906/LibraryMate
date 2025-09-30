@@ -1,8 +1,7 @@
-import { mockStudents } from '../../utils/mockData';
+
 import React from 'react';
 import Card from '../../components/UI/Card';
 import Navbar from '../../components/Layout/Navbar';
-// import { Book } from '../../utils/mockData';
 const CurrentlyReading: React.FC = () => {
   const [books, setBooks] = React.useState<any[]>([]);
   const currentlyReading = React.useMemo(() => books.filter(book => book.readingProgress > 0 && !book.isCompleted), [books]);

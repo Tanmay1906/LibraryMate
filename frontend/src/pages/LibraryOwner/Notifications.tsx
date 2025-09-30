@@ -1,4 +1,4 @@
-import { mockStudents } from '../../utils/mockData';
+
 import React, { useState } from 'react';
 import { Bell, Send, Users, Mail, MessageCircle, Calendar, Trash2 } from 'lucide-react';
 import Navbar from '../../components/Layout/Navbar';
@@ -49,7 +49,7 @@ const Notifications: React.FC = () => {
   /**
    * Handle template selection
    */
-  const useTemplate = (template: typeof templates[0]) => {
+  const handleTemplateSelect = (template: typeof templates[0]) => {
     setNotificationForm(prev => ({
       ...prev,
       type: template.type as 'email' | 'whatsapp',
@@ -212,7 +212,7 @@ const Notifications: React.FC = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => useTemplate(template)}
+                      onClick={() => handleTemplateSelect(template)}
                       className="w-full bg-white/60 border border-indigo-200 hover:bg-indigo-50 transition-colors shadow"
                     >
                       Use Template

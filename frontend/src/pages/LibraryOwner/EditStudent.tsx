@@ -1,23 +1,15 @@
-import { mockStudents } from '../../utils/mockData';
+
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Navbar from '../../components/Layout/Navbar';
 import Card from '../../components/UI/Card';
 import Input from '../../components/UI/Input';
 import Button from '../../components/UI/Button';
-// import { subscriptionPlans } from '../../utils/mockData';
 /**
  * Edit Student Page Component
  * Allows library owners to edit student details and subscription
  */
 const EditStudent: React.FC = () => {
-  const [plans, setPlans] = useState<any>({});
-  React.useEffect(() => {
-    fetch('http://localhost:4000/api/subscription-plans')
-      .then(res => res.json())
-      .then(data => setPlans(data))
-      .catch(() => setPlans({}));
-  }, []);
   const navigate = useNavigate();
   const location = useLocation();
   // Get student data from navigation state
@@ -54,7 +46,7 @@ const EditStudent: React.FC = () => {
       setTimeout(() => {
         navigate(-1); // Go back to students list
       }, 1500);
-    } catch (err) {
+    } catch {
       setError('Failed to update student. Please try again.');
     } finally {
       setLoading(false);

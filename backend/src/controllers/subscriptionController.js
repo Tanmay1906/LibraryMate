@@ -1,3 +1,8 @@
+const { PrismaClient } = require('@prisma/client');
+const catchAsync = require('../middlewares/errorHandler').catchAsync;
+const ApiError = require('../middlewares/errorHandler').ApiError;
+const prisma = new PrismaClient();
+
 const subscriptionPlans = {
   monthly: {
     id: 'monthly',
@@ -37,25 +42,25 @@ const subscriptionPlans = {
   }
 };
 
-exports.getSubscriptionPlans = async (req, res) => {
-  try {
-    res.json(subscriptionPlans);
-  } catch (error) {
-    console.error('Error fetching subscription plans:', error);
-    res.status(500).json({ error: 'Failed to fetch subscription plans.' });
-  }
-};
+exports.getSubscriptionPlans = catchAsync(async (req, res) => {
+  res.status(200).json({
+    success: true,
+    data: subscriptionPlans,
+    message: 'Subscription plans fetched successfully'
+  });
+});
 
-exports.getSubscriptionPlan = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const plan = subscriptionPlans[id];
-    if (!plan) {
-      return res.status(404).json({ error: 'Subscription plan not found.' });
-    }
-    res.json(plan);
-  } catch (error) {
-    console.error('Error fetching subscription plan:', error);
-    res.status(500).json({ error: 'Failed to fetch subscription plan.' });
+exports.getSubscriptionPlan = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const plan = subscriptionPlans[id];
+  
+  if (!plan) {
+    throw new ApiError(404, 'Subscription plan not found');
   }
-};
+  
+  res.status(200).json({
+    success: true,
+    data: plan,
+    message: 'Subscription plan fetched successfully'
+  });
+});

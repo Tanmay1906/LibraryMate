@@ -25,10 +25,10 @@ const Signup: React.FC = () => {
     phone: "",
     password: "",
     confirmPassword: "",
-    role: "student" as "owner" | "student",
-    libraryName: "",
-    libraryGST: "",
+    role: "student" as "admin" | "student",
+    libraryId: "lib-demo-001", // Default library for demo
     registrationNumber: "",
+    aadharReference: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -50,16 +50,17 @@ const Signup: React.FC = () => {
       setError("Passwords do not match");
       return false;
     }
-    if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return false;
-    }
-    if (formData.role === "owner" && !formData.libraryName) {
-      setError("Library name is required for library owners");
+    const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordPattern.test(formData.password)) {
+      setError("Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character");
       return false;
     }
     if (formData.role === "student" && !formData.registrationNumber) {
       setError("Registration number is required for students");
+      return false;
+    }
+    if (formData.role === "student" && !formData.libraryId) {
+      setError("Library selection is required for students");
       return false;
     }
     return true;
@@ -74,13 +75,25 @@ const Signup: React.FC = () => {
     setLoading(true);
 
     try {
-      const success = await signup(formData);
-      if (success) {
+      // Send data in the format backend expects
+      const backendFormData = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+        role: formData.role,
+        registrationNumber: formData.registrationNumber,
+        aadharReference: formData.aadharReference,
+        libraryId: formData.libraryId
+      };
+
+      const result = await signup(backendFormData);
+      if (result.success) {
         navigate("/otp-verification");
       } else {
-        setError("Registration failed. Please try again.");
+        setError(result.error || "Registration failed. Please try again.");
       }
-    } catch (err) {
+    } catch {
       setError("An error occurred during registration. Please try again.");
     } finally {
       setLoading(false);
@@ -268,17 +281,17 @@ const Signup: React.FC = () => {
                     <button
                       type="button"
                       onClick={() =>
-                        setFormData((prev) => ({ ...prev, role: "owner" }))
+                        setFormData((prev) => ({ ...prev, role: "admin" }))
                       }
                       className={`group p-4 border-2 rounded-2xl text-center transition-all duration-200 ${
-                        formData.role === "owner"
+                        formData.role === "admin"
                           ? "border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 shadow-lg"
                           : "border-slate-200/50 hover:border-slate-300 bg-white/40"
                       }`}
                     >
                       <div
                         className={`w-12 h-12 mx-auto mb-2 rounded-xl flex items-center justify-center transition-all ${
-                          formData.role === "owner"
+                          formData.role === "admin"
                             ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
                             : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
                         }`}
@@ -287,7 +300,7 @@ const Signup: React.FC = () => {
                       </div>
                       <div
                         className={`text-sm font-medium transition-colors ${
-                          formData.role === "owner"
+                          formData.role === "admin"
                             ? "text-purple-700"
                             : "text-slate-700"
                         }`}
@@ -364,29 +377,30 @@ const Signup: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Conditional Fields */}
-                {formData.role === "owner" && (
-                  <div className="space-y-4 p-4 bg-gradient-to-r from-purple-50/50 to-pink-50/50 rounded-2xl border border-purple-200/30">
-                    <h4 className="text-sm font-semibold text-purple-700 flex items-center space-x-2">
-                      <Building className="h-4 w-4" />
-                      <span>Library Details</span>
-                    </h4>
+                {/* Student Fields */}
 
+                {formData.role === "student" && (
+                  <div className="space-y-4 p-4 bg-gradient-to-r from-indigo-50/50 to-blue-50/50 rounded-2xl border border-indigo-200/30">
+                    <h4 className="text-sm font-semibold text-indigo-700 flex items-center space-x-2 mb-3">
+                      <BookOpen className="h-4 w-4" />
+                      <span>Student Information</span>
+                    </h4>
+                    
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-slate-700">
-                        Library Name
+                        Registration Number
                       </label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                          <Building className="h-5 w-5 text-slate-400" />
+                          <BookOpen className="h-5 w-5 text-slate-400" />
                         </div>
                         <input
-                          name="libraryName"
+                          name="registrationNumber"
                           type="text"
-                          value={formData.libraryName}
+                          value={formData.registrationNumber}
                           onChange={handleChange}
-                          className="w-full pl-12 pr-4 py-3 bg-white/60 border border-slate-200/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all duration-200 text-slate-900 placeholder-slate-400"
-                          placeholder="Your library name"
+                          className="w-full pl-12 pr-4 py-3 bg-white/60 border border-slate-200/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-200 text-slate-900 placeholder-slate-400"
+                          placeholder="Your registration number"
                           required
                         />
                       </div>
@@ -394,41 +408,22 @@ const Signup: React.FC = () => {
 
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-slate-700">
-                        Library GST Number
+                        Aadhar Reference
                       </label>
-                      <input
-                        name="libraryGST"
-                        value={formData.libraryGST}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 bg-white/60 border border-slate-200/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all duration-200 text-slate-900 placeholder-slate-400 resize-none"
-                        placeholder="GST number "
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {formData.role === "student" && (
-                  <div className="space-y-2 p-4 bg-gradient-to-r from-indigo-50/50 to-blue-50/50 rounded-2xl border border-indigo-200/30">
-                    <h4 className="text-sm font-semibold text-indigo-700 flex items-center space-x-2 mb-3">
-                      <BookOpen className="h-4 w-4" />
-                      <span>Student Information</span>
-                    </h4>
-                    <label className="block text-sm font-medium text-slate-700">
-                      Registration Number
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <BookOpen className="h-5 w-5 text-slate-400" />
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                          <User className="h-5 w-5 text-slate-400" />
+                        </div>
+                        <input
+                          name="aadharReference"
+                          type="text"
+                          value={formData.aadharReference}
+                          onChange={handleChange}
+                          className="w-full pl-12 pr-4 py-3 bg-white/60 border border-slate-200/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-200 text-slate-900 placeholder-slate-400"
+                          placeholder="12-digit Aadhar number"
+                          maxLength={12}
+                        />
                       </div>
-                      <input
-                        name="registrationNumber"
-                        type="text"
-                        value={formData.registrationNumber}
-                        onChange={handleChange}
-                        className="w-full pl-12 pr-4 py-3 bg-white/60 border border-slate-200/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-200 text-slate-900 placeholder-slate-400"
-                        placeholder="Your registration number"
-                        required
-                      />
                     </div>
                   </div>
                 )}
@@ -454,7 +449,7 @@ const Signup: React.FC = () => {
                       />
                     </div>
                     <p className="text-xs text-slate-500">
-                      At least 6 characters
+                      At least 8 characters with uppercase, lowercase, number, and special character
                     </p>
                   </div>
 

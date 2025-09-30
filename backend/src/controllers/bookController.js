@@ -1,95 +1,127 @@
 const { PrismaClient } = require('@prisma/client');
+const catchAsync = require('../middlewares/errorHandler').catchAsync;
+const ApiError = require('../middlewares/errorHandler').ApiError;
 const prisma = new PrismaClient();
 
-exports.getBooks = async (req, res) => {
-  try {
-    const books = await prisma.book.findMany({ 
-      include: { 
-        library: {
-          select: { name: true, id: true }
-        }, 
-        borrowHistory: {
-          include: {
-            student: {
-              select: { name: true, id: true }
-            }
-          }
-        }
-      } 
-    });
-
-    // Add mock data for frontend compatibility
-    const booksWithMockData = books.map(book => ({
-      ...book,
-      isWishlisted: false,
-      isCompleted: false,
-      readingProgress: 0,
-      coverUrl: book.coverUrl || 'https://images.pexels.com/photos/1029141/pexels-photo-1029141.jpeg?auto=compress&cs=tinysrgb&w=300'
-    }));
-
-    res.json(booksWithMockData);
-  } catch (error) {
-    console.error('Error fetching books:', error);
-    res.status(500).json({ error: 'Failed to fetch books.' });
-  }
-};
-
-exports.getBook = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const book = await prisma.book.findUnique({
-      where: { id },
-      include: { 
-        library: true, 
-        borrowHistory: {
-          include: {
-            student: {
-              select: { name: true, id: true }
-            }
+exports.getBooks = catchAsync(async (req, res) => {
+  const books = await prisma.book.findMany({ 
+    include: { 
+      library: {
+        select: { name: true, id: true }
+      }, 
+      borrowHistory: {
+        include: {
+          student: {
+            select: { name: true, id: true }
           }
         }
       }
-    });
-    
-    if (!book) {
-      return res.status(404).json({ error: 'Book not found.' });
+    } 
+  });
+
+  // Add mock data for frontend compatibility
+  const booksWithMockData = books.map(book => ({
+    ...book,
+    isWishlisted: false,
+    isCompleted: false,
+    readingProgress: 0,
+    coverUrl: book.coverUrl || 'https://images.pexels.com/photos/1029141/pexels-photo-1029141.jpeg?auto=compress&cs=tinysrgb&w=300'
+  }));
+
+  res.status(200).json({
+    success: true,
+    data: booksWithMockData,
+    message: 'Books fetched successfully'
+  });
+});
+
+exports.getBook = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const book = await prisma.book.findUnique({
+    where: { id },
+    include: { 
+      library: true, 
+      borrowHistory: {
+        include: {
+          student: {
+            select: { name: true, id: true }
+          }
+        }
+      }
     }
-    
-    res.json(book);
-  } catch (error) {
-    console.error('Error fetching book:', error);
-    res.status(500).json({ error: 'Failed to fetch book.' });
+  });
+  
+  if (!book) {
+    throw new ApiError(404, 'Book not found');
   }
-};
+  
+  res.status(200).json({
+    success: true,
+    data: book,
+    message: 'Book fetched successfully'
+  });
+});
 
-exports.createBook = async (req, res) => {
-  try {
-    const book = await prisma.book.create({
-      data: req.body,
-      include: {
-        library: true
-      }
-    });
-    res.json(book);
-  } catch (error) {
-    console.error('Error creating book:', error);
-    res.status(500).json({ error: 'Failed to create book.' });
-  }
-};
+exports.createBook = catchAsync(async (req, res) => {
+  const book = await prisma.book.create({
+    data: req.body,
+    include: {
+      library: true
+    }
+  });
+  
+  res.status(201).json({
+    success: true,
+    data: book,
+    message: 'Book created successfully'
+  });
+});
 
-exports.updateBook = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const book = await prisma.book.update({
-      where: { id },
-      data: req.body,
-      include: {
-        library: true
-      }
-    });
-    res.json(book);
-  } catch (error) {
-    console.error('Error updating book:', error);
-    res.status(500).json({ error: 'Failed to update book.' });
+exports.updateBook = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  
+  // Check if book exists first
+  const existingBook = await prisma.book.findUnique({
+    where: { id }
+  });
+  
+  if (!existingBook) {
+    throw new ApiError(404, 'Book not found');
   }
-};
+  
+  const book = await prisma.book.update({
+    where: { id },
+    data: req.body,
+    include: {
+      library: true
+    }
+  });
+  
+  res.status(200).json({
+    success: true,
+    data: book,
+    message: 'Book updated successfully'
+  });
+});
+
+exports.deleteBook = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  
+  // Check if book exists first
+  const existingBook = await prisma.book.findUnique({
+    where: { id }
+  });
+  
+  if (!existingBook) {
+    throw new ApiError(404, 'Book not found');
+  }
+  
+  await prisma.book.delete({
+    where: { id }
+  });
+  
+  res.status(200).json({
+    success: true,
+    message: 'Book deleted successfully'
+  });
+});

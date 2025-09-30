@@ -1,6 +1,6 @@
-import { mockStudents } from '../../utils/mockData';
+
 import React, { useState } from 'react';
-import { Building, Mail, Phone, MapPin, Users, BookOpen, Edit3, Save, X } from 'lucide-react';
+import { Building, Users, BookOpen, Edit3, Save, X } from 'lucide-react';
 import Navbar from '../../components/Layout/Navbar';
 import Card from '../../components/UI/Card';
 import Input from '../../components/UI/Input';

@@ -1,8 +1,7 @@
-import { mockStudents } from '../../utils/mockData';
+
 import React from 'react';
 import Card from '../../components/UI/Card';
 import Navbar from '../../components/Layout/Navbar';
-// import { Book } from '../../utils/mockData';
 const Wishlist: React.FC = () => {
   const [books, setBooks] = React.useState<any[]>([]);
   const wishlistedBooks = React.useMemo(() => books.filter(book => book.isWishlisted), [books]);

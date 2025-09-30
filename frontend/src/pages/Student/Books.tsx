@@ -1,4 +1,4 @@
-import { mockStudents } from '../../utils/mockData';
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {  Filter, Heart, BookOpen, CheckCircle, Play, Eye, Star } from 'lucide-react';
@@ -7,7 +7,6 @@ import Navbar from '../../components/Layout/Navbar';
 import Card from '../../components/UI/Card';
 import Input from '../../components/UI/Input';
 import Button from '../../components/UI/Button';
-// import { type Book } from '../../utils/mockData';
 /**
  * Books Page Component
  * Displays all available books with search, filtering, and interaction capabilities

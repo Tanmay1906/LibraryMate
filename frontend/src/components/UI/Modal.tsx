@@ -8,9 +8,10 @@ interface ModalProps {
   className?: string;
   title?: string;
   showClose?: boolean;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, className = '' }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, className = '', size = 'md', title, showClose = true }) => {
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -27,16 +28,32 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, className = ''
     modalRef.current.focus();
   }, [isOpen]);
 
+  const sizeClasses = {
+    sm: 'max-w-sm',
+    md: 'max-w-lg',
+    lg: 'max-w-2xl',
+    xl: 'max-w-4xl'
+  };
+
   if (!isOpen) return null; 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className={`bg-white/90 rounded-2xl shadow-2xl p-8 min-w-[300px] max-w-lg w-full relative ${className}`}>
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-blue-900 hover:text-red-500 text-xl font-bold focus:outline-none"
-        >
-          ×
-        </button>
+      <div className={`bg-white/90 rounded-2xl shadow-2xl p-8 min-w-[300px] ${sizeClasses[size]} w-full relative ${className}`}
+           ref={modalRef}
+           tabIndex={-1}>
+        {title && (
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-slate-900">{title}</h2>
+          </div>
+        )}
+        {showClose && (
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-blue-900 hover:text-red-500 text-xl font-bold focus:outline-none"
+          >
+            ×
+          </button>
+        )}
         {children}
       </div>
     </div>

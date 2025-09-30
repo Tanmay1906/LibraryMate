@@ -1,62 +1,141 @@
 const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcrypt');
+const { catchAsync, NotFoundError, ConflictError } = require('../middlewares/errorHandler');
+
 const prisma = new PrismaClient();
 
-exports.getStudents = async (req, res) => {
-  try {
-    const students = await prisma.student.findMany({
-      include: {
-        library: true,
-        payments: true
-      }
-    });
-    res.json(students);
-  } catch (error) {
-    console.error('Error fetching students:', error);
-    res.status(500).json({ error: 'Failed to fetch students.' });
-  }
-};
+exports.getStudents = catchAsync(async (req, res) => {
+  const students = await prisma.student.findMany({
+    include: {
+      library: true,
+      payments: true
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      registrationNumber: true,
+      subscriptionPlan: true,
+      paymentStatus: true,
+      joinDate: true,
+      library: true,
+      payments: true,
+      // Exclude password from response
+    }
+  });
+  
+  res.json({
+    success: true,
+    data: students,
+    count: students.length
+  });
+});
 
-exports.createStudent = async (req, res) => {
-  try {
-    const student = await prisma.student.create({
-      data: req.body,
-      include: {
-        library: true
-      }
-    });
-    res.json(student);
-  } catch (error) {
-    console.error('Error creating student:', error);
-    res.status(500).json({ error: 'Failed to create student.' });
-  }
-};
+exports.createStudent = catchAsync(async (req, res) => {
+  const { 
+    name, 
+    email, 
+    phone, 
+    password, 
+    registrationNumber, 
+    aadharReference, 
+    libraryId,
+    subscriptionPlan = 'MONTHLY',
+    paymentStatus = 'PENDING'
+  } = req.body;
 
-exports.updateStudent = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const student = await prisma.student.update({
-      where: { id },
-      data: req.body,
-      include: {
-        library: true
-      }
-    });
-    res.json(student);
-  } catch (error) {
-    console.error('Error updating student:', error);
-    res.status(500).json({ error: 'Failed to update student.' });
-  }
-};
+  // Hash password
+  const hashedPassword = await bcrypt.hash(password, 10);
 
-exports.deleteStudent = async (req, res) => {
-  try {
-    const { id } = req.params;
-    await prisma.student.delete({
-      where: { id }
-    });
-    res.json({ message: 'Student deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting student:', error);
-    res.status(500).json({ error: 'Failed to delete student.' });
+  const student = await prisma.student.create({
+    data: {
+      name,
+      email,
+      phone,
+      password: hashedPassword,
+      registrationNumber,
+      aadharReference,
+      libraryId,
+      subscriptionPlan,
+      paymentStatus
+    },
+    include: {
+      library: true
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      registrationNumber: true,
+      subscriptionPlan: true,
+      paymentStatus: true,
+      joinDate: true,
+      library: true,
+      // Exclude password from response
+    }
+  });
+
+  res.status(201).json({
+    success: true,
+    data: student,
+    message: 'Student created successfully'
+  });
+});
+
+exports.updateStudent = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const updateData = { ...req.body };
+
+  // Hash password if it's being updated
+  if (updateData.password) {
+    updateData.password = await bcrypt.hash(updateData.password, 10);
   }
-};
+
+  const student = await prisma.student.update({
+    where: { id },
+    data: updateData,
+    include: {
+      library: true
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      registrationNumber: true,
+      subscriptionPlan: true,
+      paymentStatus: true,
+      joinDate: true,
+      library: true,
+      // Exclude password from response
+    }
+  });
+
+  if (!student) {
+    throw new NotFoundError('Student not found');
+  }
+
+  res.json({
+    success: true,
+    data: student,
+    message: 'Student updated successfully'
+  });
+});
+
+exports.deleteStudent = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  
+  const student = await prisma.student.findUnique({ where: { id } });
+  if (!student) {
+    throw new NotFoundError('Student not found');
+  }
+
+  await prisma.student.delete({ where: { id } });
+  
+  res.json({
+    success: true,
+    message: 'Student deleted successfully'
+  });
+});
